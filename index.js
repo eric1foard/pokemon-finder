@@ -1,6 +1,6 @@
 const rp = require('request-promise');
 const AREAS = require('./res/areas');
-const pokedex = require('./res/pokemon');
+const pokedex = require('./res/pokemon').uncaught;
 
 const scan = (area) => {
     const endpoint = `https://pokevision.com/map/data/${area.lat}/${area.lng}`;
@@ -12,19 +12,23 @@ const scan = (area) => {
 };
 
 const checkPokedex = (search) => {
-    return JSON.parse(search.payload).pokemon
-    .map(p => `${pokedex(p.pokemonId)} near ${search.area}!`);
+    let target, found = [];
+    JSON.parse(search.payload).pokemon
+    .forEach(p => {
+        target = pokedex(p.pokemonId);
+        if (target) found.push(`${target} near ${search.area}!`);
+    });
+    return found;
 };
 
 const findPokemon = () => {
     let promises = AREAS.map(area => {
-        console.log(area.name);
         return scan(area);
     });
     return Promise.all(promises)
     .then(result => {
         const allNearby = result.map(res => checkPokedex(res));
-        console.log(allNearby);
+        console.log(allNearby.length ? allNearby : 'no uncaught pokemon in the area');
     })
     .catch(err => {
         console.log('error finding pokemon! ', err);
